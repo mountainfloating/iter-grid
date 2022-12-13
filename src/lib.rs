@@ -41,7 +41,7 @@ pub struct Grid<I>
 where
     I: Iterator,
 {
-    columns: usize,
+    pub columns: usize,
     inner: I,
 }
 
