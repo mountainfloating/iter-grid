@@ -4,7 +4,7 @@
 //! Intended to be simple and flexible.
 //! ```rust
 //! use iter_grid::ToGrid;
-//! 
+//!
 //! let file:&str = "1,2,3,4,5\n6,7,8,9,10\n11,12,13,14,15";
 //! let mut store = file.lines()
 //!     .flat_map(|line|line.split(',').map(|s|s.parse().unwrap()))
@@ -47,6 +47,18 @@ where
 
 impl<I> Grid<I>
 where
+    I: Iterator + Clone,
+{
+    pub fn transpose(self) -> impl Iterator<Item = I::Item> {
+        (0..self.columns).flat_map(move|col| 
+            self.inner.clone()
+            .grid(self.columns)
+            .iter_col(col))
+    }
+}
+
+impl<I> Grid<I>
+where
     I: Iterator,
 {
     pub fn get(self, col: usize, row: usize) -> Option<I::Item> {
@@ -57,7 +69,7 @@ where
         self,
         col_bounds: R,
         row_bounds: R,
-    ) -> impl Iterator<Item = <I as Iterator>::Item> {
+    ) -> impl Iterator<Item = I::Item> {
         let columns = self.columns;
         self.iter_rows(row_bounds)
             .grid(columns)
@@ -90,7 +102,30 @@ where
             .skip(bounds.start.saturating_mul(self.columns))
             .take((bounds.end - bounds.start).saturating_mul(self.columns))
     }
-    fn extract_range<R: RangeBounds<usize>>(&self, bounds: R, max: usize) -> core::ops::Range<usize> {
+
+    /// * * x
+    /// * x *
+    /// x * *
+    /// 
+    pub fn iter_diag_bwd(self,col:usize,row:usize) -> impl Iterator<Item = I::Item>{
+        let mut iter = self.inner.skip((row-(self.columns-col))*self.columns-1);
+        (0..self.columns).rev().filter_map(move |col_off|iter.nth(col_off))
+    }
+
+    /// x * *
+    /// * x *
+    /// * * x
+    /// 
+    pub fn iter_diag_fwd(self,col:usize,row:usize) -> impl Iterator<Item = I::Item>{
+        let mut iter = self.inner.skip((row-col)*self.columns);
+        (0..self.columns).filter_map(move |col_off|iter.nth(col_off))
+    }
+
+    fn extract_range<R: RangeBounds<usize>>(
+        &self,
+        bounds: R,
+        max: usize,
+    ) -> core::ops::Range<usize> {
         let start = match bounds.start_bound() {
             core::ops::Bound::Included(p) => *p,
             core::ops::Bound::Excluded(p) => p + 1,
@@ -113,12 +148,13 @@ mod tests {
 
     #[test]
     fn test_get() {
-        let file:&str = "1,2,3,4,5\n6,7,8,9,10\n11,12,13,14,15";
-        let mut store = file.lines()
-            .flat_map(|line|line.split(',').map(|s|s.parse().unwrap()))
+        let file: &str = "1,2,3,4,5\n6,7,8,9,10\n11,12,13,14,15";
+        let mut store = file
+            .lines()
+            .flat_map(|line| line.split(',').map(|s| s.parse().unwrap()))
             .collect::<Vec<_>>();
         let grid = store.iter_mut().grid(5);
-        grid.iter_col(3).for_each(|i| *i= 0);
+        grid.iter_col(3).for_each(|i| *i = 0);
         println!("{:?}", store);
         // prints: [1, 2, 3, 0, 5, 6, 7, 8, 0, 10, 11, 12, 13, 0, 15]
     }
