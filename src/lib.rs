@@ -51,9 +51,7 @@ where
 {
     pub fn transpose(self) -> impl Iterator<Item = I::Item> {
         (0..self.columns).flat_map(move|col| 
-            self.inner.clone()
-            .grid(self.columns)
-            .iter_col(col))
+            self.clone().iter_col(col))
     }
 }
 
