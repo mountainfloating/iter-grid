@@ -47,6 +47,17 @@ where
     inner: I,
 }
 
+impl<I> Iterator for Grid<I>
+where
+    I: Iterator,
+{
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
 impl<I> Grid<I>
 where
     I: Iterator + Clone,
