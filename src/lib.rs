@@ -17,7 +17,7 @@
 use core::ops::RangeBounds;
 /// ToGrid ist implemented for all iterators.
 /// Provides the grid function to wrap iterators with the Grid struct which contains the main functionality.
-trait ToGrid
+pub trait ToGrid
 where
     Self: Iterator + Sized,
 {
