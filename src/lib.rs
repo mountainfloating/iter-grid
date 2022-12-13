@@ -59,9 +59,18 @@ impl<I> Grid<I>
 where
     I: Iterator,
 {
+    pub fn index_from_flat(&self, index:usize)->(usize,usize){
+        assert!(self.columns!=0, "Columns set to 0! Cant calculate index");
+        let c = index%self.columns;
+        (c,(index-c)/self.columns)
+    }
+    pub fn index_to_flat(&self, col:usize, row:usize)->usize{
+        self.columns*row+col
+    }
     pub fn get(self, col: usize, row: usize) -> Option<I::Item> {
         assert!(col < self.columns);
-        self.inner.skip(col + row * self.columns).next()
+        let index = self.index_to_flat(col, row);
+        self.inner.skip(index).next()
     }
     pub fn iter_sub<R: RangeBounds<usize>>(
         self,
@@ -93,7 +102,6 @@ where
             .skip(row.saturating_mul(self.columns))
             .take(self.columns)
     }
-
     pub fn iter_rows<R: RangeBounds<usize>>(self, bounds: R) -> impl Iterator<Item = I::Item> {
         let bounds = self.extract_range(bounds, usize::MAX);
         self.inner
@@ -115,7 +123,8 @@ where
     /// * * x
     /// 
     pub fn iter_diag_fwd(self,col:usize,row:usize) -> impl Iterator<Item = I::Item>{
-        let mut iter = self.inner.skip((row-col)*self.columns);
+        let skip = self.index_to_flat(row-col, 0);
+        let mut iter = self.inner.skip(skip);
         (0..self.columns).filter_map(move |col_off|iter.nth(col_off))
     }
 
