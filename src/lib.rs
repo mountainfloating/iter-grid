@@ -16,7 +16,7 @@
 //! println!("{:?}", store);
 //! // prints: [1, 2, 3, 0, 5, 6, 7, 8, 0, 10, 11, 12, 13, 0, 15]
 //! ```
-use core::{ops::RangeBounds, iter::{StepBy, Skip, Take}};
+use core::{ops::{RangeBounds, Deref, DerefMut}, iter::{StepBy, Skip, Take}};
 /// ToGrid ist implemented for all iterators.
 /// Provides the grid function to wrap iterators with the Grid struct which contains the main functionality.
 pub trait ToGrid
@@ -33,10 +33,12 @@ where
     fn grid(self, columns: usize) -> Grid<Self> {
         Grid {
             columns,
+            rows:None,
             inner: self,
         }
     }
 }
+
 ///The Grid struct wraps an Iterator and provies two dimensional access over its contents.
 #[derive(Debug, Clone)]
 pub struct Grid<I>
@@ -44,6 +46,7 @@ where
     I: Iterator,
 {
     pub columns: usize,
+    rows:Option<usize>,
     inner: I,
 }
 
@@ -58,6 +61,24 @@ where
     }
 }
 
+ impl<I> DerefMut for Grid<I>
+ where
+     I: Iterator,
+ {
+     fn deref_mut(&mut self) -> &mut Self::Target {
+         &mut self.inner
+     }
+ }
+ impl<I> Deref for Grid<I>
+ where
+     I: Iterator,
+ {
+     type Target = I;
+     fn deref(&self) -> &Self::Target {
+         &self.inner
+     }
+ }
+
 impl<I> Grid<I>
 where
     I: Iterator + Clone,
@@ -66,12 +87,18 @@ where
         (0..self.columns).flat_map(move|col| 
             self.clone().iter_col(col))
     }
+    pub fn count_rows(&self)->usize{
+        self.inner.clone().count()/self.columns
+    }
 }
 
 impl<I> Grid<I>
 where
     I: Iterator,
 {
+    pub fn set_rows(&mut self,rows:Option<usize>){
+        self.rows = rows;
+    }
     pub fn index_from_flat(&self, index:usize)->(usize,usize){
         assert!(self.columns!=0, "Columns set to 0! Cant calculate index");
         let c = index%self.columns;
@@ -89,37 +116,43 @@ where
         self,
         col_bounds: R,
         row_bounds: R,
-    ) -> impl Iterator<Item = I::Item> {
+    ) -> Grid<impl Iterator<Item=I::Item>>{
         let columns = self.columns;
-        self.iter_rows(row_bounds)
-            .grid(columns)
-            .iter_cols(col_bounds)
+        let col_range = self.extract_range(&col_bounds, columns);
+         Grid{
+             columns: col_range.end-col_range.start,
+             rows: None,
+             inner: self.iter_rows(row_bounds)
+              .iter_cols(col_bounds),
+         }
     }
     pub fn iter_col(self, col: usize) -> StepBy<Skip<I>>{
         let step = self.columns;
         self.inner.skip(col).step_by(step)
     }
-    pub fn iter_cols<R: RangeBounds<usize>>(self, bounds: R) -> impl Iterator<Item = I::Item> {
-        let bounds = self.extract_range(bounds, self.columns);
+    pub fn iter_cols<R: RangeBounds<usize>>(self, bounds: R) ->  Grid<impl Iterator<Item = I::Item>>{
+        let bounds = self.extract_range(&bounds, self.columns);
         assert!(bounds.end <= self.columns);
-        self.inner.enumerate().filter_map(move |(pos, item)| {
-            if bounds.contains(&(pos % self.columns)) {
-                Some(item)
-            } else {
-                None
-            }
-        })
+        let col_new = bounds.end-bounds.start;
+        self.inner.enumerate()
+        .filter(move |(pos, _)| bounds.contains(&(pos % self.columns)))
+        .map(|(_,item)|item)
+        .grid(col_new)
     }
     pub fn iter_row(self, row: usize) -> Take<Skip<I>>{
         self.inner
             .skip(row.saturating_mul(self.columns))
             .take(self.columns)
     }
-    pub fn iter_rows<R: RangeBounds<usize>>(self, bounds: R) -> impl Iterator<Item = I::Item> {
-        let bounds = self.extract_range(bounds, usize::MAX);
-        self.inner
+    pub fn iter_rows<R: RangeBounds<usize>>(self, bounds: R) -> Grid<Take<Skip<I>>> {
+        let bounds = self.extract_range(&bounds, usize::MAX);
+        Grid{
+            columns: self.columns,
+            rows: Some(bounds.end-bounds.start),
+            inner:  self.inner
             .skip(bounds.start.saturating_mul(self.columns))
             .take((bounds.end - bounds.start).saturating_mul(self.columns))
+        }
     }
 
     /// * * x
@@ -143,7 +176,7 @@ where
 
     fn extract_range<R: RangeBounds<usize>>(
         &self,
-        bounds: R,
+        bounds: &R,
         max: usize,
     ) -> core::ops::Range<usize> {
         let start = match bounds.start_bound() {
