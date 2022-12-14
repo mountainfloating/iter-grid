@@ -1,4 +1,4 @@
-#![no_std]
+// #![no_std]
 
 //! Grid indexing implemented for Iterators
 //!
@@ -21,20 +21,21 @@ use core::{ops::{RangeBounds, Deref, DerefMut}, iter::{StepBy, Skip, Take}};
 /// Provides the grid function to wrap iterators with the Grid struct which contains the main functionality.
 pub trait ToGrid
 where
-    Self: Iterator + Sized,
+    Self: IntoIterator + Sized,
 {
-    fn grid(self, columns: usize) -> Grid<Self>;
+    fn grid(self, columns: usize) -> Grid<Self::IntoIter>;
+
 }
 
 impl<I> ToGrid for I
 where
-    I: Iterator,
+    I: IntoIterator,
 {
-    fn grid(self, columns: usize) -> Grid<Self> {
+    fn grid(self, columns: usize) -> Grid<I::IntoIter> {
         Grid {
             columns,
             rows:None,
-            inner: self,
+            inner: self.into_iter(),
         }
     }
 }
@@ -197,18 +198,18 @@ where
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+     use super::*;
 
-    // #[test]
-    // fn test_get() {
-    //     let file: &str = "1,2,3,4,5\n6,7,8,9,10\n11,12,13,14,15";
-    //     let mut store = file
-    //         .lines()
-    //         .flat_map(|line| line.split(',').map(|s| s.parse().unwrap()))
-    //         .collect::<Vec<_>>();
-    //     let grid = store.iter_mut().grid(5);
-    //     grid.iter_col(3).for_each(|i| *i = 0);
-    //     println!("{:?}", store);
-    //     // prints: [1, 2, 3, 0, 5, 6, 7, 8, 0, 10, 11, 12, 13, 0, 15]
-    // }
+     #[test]
+     fn test_get() {
+         let file: &str = "1,2,3,4,5\n6,7,8,9,10\n11,12,13,14,15";
+         let mut store = file
+             .lines()
+             .flat_map(|line| line.split(',').map(|s| s.parse().unwrap()))
+             .collect::<Vec<_>>();
+         let grid = store.iter_mut().grid(5);
+         grid.iter_col(3).for_each(|i| *i = 0);
+         println!("{:?}", store);
+         // prints: [1, 2, 3, 0, 5, 6, 7, 8, 0, 10, 11, 12, 13, 0, 15]
+     }
 }
