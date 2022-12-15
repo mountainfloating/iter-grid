@@ -162,7 +162,7 @@ where
     }
 
     ///```rust
-    /// 
+    ///
     /// // . . x
     /// // . x .
     /// // x . .
@@ -178,15 +178,17 @@ where
     ///     .for_each(|(l, r)| assert!(l == r));
     ///```
     pub fn iter_diag_bwd(self, col: usize, row: usize) -> StepBy<Skip<I::IntoIter>> {
-        let skip = if col > row{ // lower part
-            self.index_to_flat(self.columns-1, row-(self.columns-1-col))
-        } else { // upper part
-            self.index_to_flat(row-col, 0)
+        let skip = if col > row {
+            // lower part
+            self.index_to_flat(self.columns - 1, row - (self.columns - 1 - col))
+        } else {
+            // upper part
+            self.index_to_flat(row - col, 0)
         };
         self.inner.into_iter().skip(skip).step_by(self.columns - 1)
     }
     ///```rust
-    /// 
+    ///
     /// // x . .
     /// // . x .
     /// // . . x
@@ -203,7 +205,7 @@ where
     ///```
     pub fn iter_diag_fwd(self, col: usize, row: usize) -> StepBy<Skip<I::IntoIter>> {
         let mut diff = col.abs_diff(row);
-        if col < row{
+        if col < row {
             diff = self.index_to_flat(0, diff)
         } else {
             diff = self.index_to_flat(diff, 0);
@@ -212,7 +214,7 @@ where
     }
 
     ///```rust
-    /// 
+    ///
     /// // * 1 2 *
     /// // * 3 4 *
     /// // * 5 6 *
