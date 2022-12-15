@@ -1,8 +1,8 @@
-//  #![no_std]
-//! Grid indexing implemented for Iterators
+#![no_std]
+//! Grids for Iterators
 //!
-//! Provides an ideomatic abstraction for two dimensional Indexes.
-//! Intended to be simple and flexible.
+//! Provides a two dimensional abstraction over Iterators.
+//! Intended to be simple, flexible and ideomatic.
 //! ```rust
 //! use iter_grid::IntoGrid;
 //!
@@ -10,10 +10,11 @@
 //! let mut store = file.lines()
 //!     .flat_map(|line|line.split(',').map(|s|s.parse().unwrap()))
 //!     .collect::<Vec<_>>();
-//! let grid = store.iter_mut().grid(5);
-//! grid.iter_col(3).for_each(|i| *i= 0);
-//! println!("{:?}", store);
-//! // prints: [1, 2, 3, 0, 5, 6, 7, 8, 0, 10, 11, 12, 13, 0, 15]
+//! store.iter_mut().grid(5).iter_col(3).for_each(|i| *i= 0);
+//! store.iter_mut().grid(5).iter_row(1).for_each(|i| *i+= 1);
+//! let _borrowing_grid = store.iter().grid(5);
+//! let capturing_grid = store.grid(5);
+//! println!("{:?}", capturing_grid);
 //! ```
 use core::{
     iter::{Skip, StepBy, Take},
@@ -331,7 +332,7 @@ mod tests {
         //    .grid(5)
         //    .iter_row(2)
         //    .for_each(|i| *i = 0);
-        let store = store.grid(5).iter_transpose();
+        let _store = store.grid(5).iter_transpose();
         // println!("{store:?}")
         // prints: [1, 2, 3, 0, 5, 6, 7, 8, 0, 10, 11, 12, 13, 0, 15]
     }
