@@ -12,7 +12,8 @@
 //!     .collect::<Vec<_>>();
 //! store.iter_mut().grid(5).iter_col(3).for_each(|i| *i= 0);
 //! store.iter_mut().grid(5).iter_row(1).for_each(|i| *i+= 1);
-//! let _borrowing_grid = store.iter().grid(5);
+//! let borrowing_grid = store.iter().grid(5);
+//! drop(borrowing_grid);
 //! let capturing_grid = store.grid(5);
 //! println!("{:?}", capturing_grid);
 //! ```
