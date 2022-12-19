@@ -105,26 +105,31 @@ where
     pub fn iter_transpose(self) -> impl Iterator<Item = I::Item> + 'a {
         let iter = self.inner.into_iter();
         (0..self.columns).flat_map(move |col| iter.clone().grid(self.columns).iter_col(col))
-    }
+    }    
 }
 impl<I> Grid<I>
 where
     I: IntoIterator,
 {
-    // pub fn count_rows(&self)->usize{
+    pub fn count_rows(mut self)->usize{
+        let len = if let Some(len) = self.len{
+            len
+        } else {
+            let len = self.inner.into_iter().count();
+            self.len = Some(len);
+            len
+        };
+        len / self.columns
+    }    // pub fn count_rows(&self)->usize{
     //     self.inner.clone().count()/self.columns
     // }
-    pub fn iter_sub<R: RangeBounds<usize>>(
+    pub fn iter_sub<R1,R2>(
         self,
-        col_bounds: R,
-        row_bounds: R,
-    ) -> Grid<impl IntoIterator<Item = I::Item>> {
-        let columns = self.columns;
-        let col_range = self.extract_range(&col_bounds, columns);
-        Grid {
-            columns: col_range.end - col_range.start,
-            inner: self.iter_rows(row_bounds).iter_cols(col_bounds),
-        }
+        col_bounds: R1,
+        row_bounds: R2,
+    ) ->Grid<impl IntoIterator<Item = I::Item>>// Grid<FilterMap<Enumerate<Take<Skip<I::IntoIter>>>, impl FnMut((usize, I::Item)) -> Option<I::Item>>>
+    where R1: RangeBounds<usize>, R2: RangeBounds<usize> {
+        self.iter_rows(row_bounds).iter_cols(col_bounds)
     }
 
     ///```rust
@@ -161,7 +166,7 @@ where
             .into_iter()
             .skip(row * self.columns)
             .take(self.columns)
-    }
+           }
 
     ///```rust
     ///
@@ -229,18 +234,19 @@ where
     ///     .zip([1,2,6,7,11,12,16,17,21,22])
     ///     .for_each(|(l, r)| assert!(l == r));
     ///```
-    pub fn iter_cols<R: RangeBounds<usize>>(
+    pub fn iter_cols<R>(
         self,
         bounds: R,
-    ) -> Grid<impl IntoIterator<Item = I::Item>> {
+    ) -> Grid<impl Iterator<Item=I::Item>>
+    where// FilterMap<Enumerate<I::IntoIter>,impl FnMut((usize,I::Item))->Option<I::Item>> where 
+    R: RangeBounds<usize>{
         let bounds = self.extract_range(&bounds, self.columns);
         assert!(bounds.end <= self.columns);
         let new_columns = bounds.end - bounds.start;
         self.inner
             .into_iter()
             .enumerate()
-            .filter(move |(i, _)| bounds.contains(&(i % self.columns)))
-            .map(|(_, i)| i)
+            .filter_map(move |(p, i)| if bounds.contains(&(p % self.columns)){Some(i)}else{None})
             .grid(new_columns)
     }
 
@@ -262,7 +268,7 @@ where
         self.inner
             .into_iter()
             .skip(bounds.start * self.columns)
-            .take((bounds.end - bounds.start) * self.columns)
+            .take((bounds.end - bounds.start).saturating_mul(self.columns))
             .grid(self.columns)
     }
     fn extract_range<R: RangeBounds<usize>>(&self, bounds: &R, max: usize) -> Range<usize> {
@@ -319,10 +325,11 @@ mod tests {
             .flat_map(|line| line.split(',').map(|s| s.parse::<usize>().unwrap()))
             .collect();
 
-        (0..10)
-            .grid(3)
-            .iter_row(1)
-            .zip([3, 4, 5])
+        (0..25)
+            .grid(5)
+            .iter_sub(0..1,0..1)
+            .into_iter()
+            .zip([0])
             .for_each(|(l, r)| assert!(l == r));
         // store.iter_mut()
         //   .grid(5)
