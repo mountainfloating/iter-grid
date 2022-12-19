@@ -111,16 +111,7 @@ impl<I> Grid<I>
 where
     I: IntoIterator,
 {
-    pub fn count_rows(mut self)->usize{
-        let len = if let Some(len) = self.len{
-            len
-        } else {
-            let len = self.inner.into_iter().count();
-            self.len = Some(len);
-            len
-        };
-        len / self.columns
-    }    // pub fn count_rows(&self)->usize{
+    // pub fn count_rows(&self)->usize{
     //     self.inner.clone().count()/self.columns
     // }
     pub fn iter_sub<R1,R2>(
