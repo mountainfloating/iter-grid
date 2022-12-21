@@ -105,21 +105,30 @@ where
     pub fn iter_transpose(self) -> impl Iterator<Item = I::Item> + 'a {
         let iter = self.inner.into_iter();
         (0..self.columns).flat_map(move |col| iter.clone().grid(self.columns).iter_col(col))
-    }    
+    }
 }
 impl<I> Grid<I>
 where
     I: IntoIterator,
 {
+    pub fn get(self, col: usize, row: usize) -> Option<I::Item> {
+        let skip = self.index_to_flat(col, row);
+        self.into_iter().skip(skip).next()
+    }
+
     // pub fn count_rows(&self)->usize{
     //     self.inner.clone().count()/self.columns
     // }
-    pub fn iter_sub<R1,R2>(
+    pub fn iter_sub<R1, R2>(
         self,
         col_bounds: R1,
         row_bounds: R2,
-    ) ->Grid<impl IntoIterator<Item = I::Item>>// Grid<FilterMap<Enumerate<Take<Skip<I::IntoIter>>>, impl FnMut((usize, I::Item)) -> Option<I::Item>>>
-    where R1: RangeBounds<usize>, R2: RangeBounds<usize> {
+    ) -> Grid<impl IntoIterator<Item = I::Item>>
+    // Grid<FilterMap<Enumerate<Take<Skip<I::IntoIter>>>, impl FnMut((usize, I::Item)) -> Option<I::Item>>>
+    where
+        R1: RangeBounds<usize>,
+        R2: RangeBounds<usize>,
+    {
         self.iter_rows(row_bounds).iter_cols(col_bounds)
     }
 
@@ -157,7 +166,7 @@ where
             .into_iter()
             .skip(row * self.columns)
             .take(self.columns)
-           }
+    }
 
     ///```rust
     ///
@@ -225,19 +234,24 @@ where
     ///     .zip([1,2,6,7,11,12,16,17,21,22])
     ///     .for_each(|(l, r)| assert!(l == r));
     ///```
-    pub fn iter_cols<R>(
-        self,
-        bounds: R,
-    ) -> Grid<impl Iterator<Item=I::Item>>
-    where// FilterMap<Enumerate<I::IntoIter>,impl FnMut((usize,I::Item))->Option<I::Item>> where 
-    R: RangeBounds<usize>{
+    pub fn iter_cols<R>(self, bounds: R) -> Grid<impl Iterator<Item = I::Item>>
+    where
+        // FilterMap<Enumerate<I::IntoIter>,impl FnMut((usize,I::Item))->Option<I::Item>> where
+        R: RangeBounds<usize>,
+    {
         let bounds = self.extract_range(&bounds, self.columns);
         assert!(bounds.end <= self.columns);
         let new_columns = bounds.end - bounds.start;
         self.inner
             .into_iter()
             .enumerate()
-            .filter_map(move |(p, i)| if bounds.contains(&(p % self.columns)){Some(i)}else{None})
+            .filter_map(move |(p, i)| {
+                if bounds.contains(&(p % self.columns)) {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
             .grid(new_columns)
     }
 
@@ -278,29 +292,6 @@ where
         start..end
     }
 }
-
-impl<I> Grid<I>
-where
-    I: Index<usize>,
-    I::Output: Sized,
-{
-    pub fn get(&self, col: usize, row: usize) -> &I::Output {
-        assert!(col < self.columns);
-        let index = self.index_to_flat(col, row);
-        &self.inner[index]
-    }
-}
-impl<I> Grid<I>
-where
-    I: IndexMut<usize>,
-    I::Output: Sized,
-{
-    pub fn get_mut(&mut self, col: usize, row: usize) -> &mut I::Output {
-        assert!(col < self.columns);
-        let index = self.index_to_flat(col, row);
-        &mut self.inner[index]
-    }
-}
 #[cfg(test)]
 mod tests {
     extern crate alloc;
@@ -318,7 +309,7 @@ mod tests {
 
         (0..25)
             .grid(5)
-            .iter_sub(0..1,0..1)
+            .iter_sub(0..1, 0..1)
             .into_iter()
             .zip([0])
             .for_each(|(l, r)| assert!(l == r));
